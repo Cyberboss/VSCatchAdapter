@@ -1,0 +1,7 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+*.user
+/VSCatchAdapter/.vs/VSCatchAdapter/v14
+/VSCatchAdapter/obj/Debug
