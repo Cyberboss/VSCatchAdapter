@@ -41,8 +41,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="Discoverer.cs" />
-    <Compile Include="Executor.cs" />
+    <Compile Include="CatchTestDiscoverer.cs" />
+    <Compile Include="CatchTestExecuter.cs" />
+    <Compile Include="CatchTestOutputReader.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
