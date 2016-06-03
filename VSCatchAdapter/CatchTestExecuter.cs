@@ -13,6 +13,10 @@ namespace VSCatchAdapter
         public const string ExecutorUriString = "executor://CatchTestExecutor/v1";
         public static readonly Uri ExecutorUri = new Uri(CatchTestExecuter.ExecutorUriString);
         bool FCancelled;
+        public CatchTestExecuter()
+        {
+            Debugger.Launch();
+        }
         public void RunTests(IEnumerable<string> ASources, IRunContext ARunContext,
             IFrameworkHandle AFrameworkHandle)
         {
@@ -32,7 +36,7 @@ namespace VSCatchAdapter
 
 
                 var P = new Process();
-                P.StartInfo.Arguments = Test.FullyQualifiedName;
+                P.StartInfo.Arguments = '"' + Test.FullyQualifiedName + '"';
                 P.StartInfo.RedirectStandardError = true;
                 P.StartInfo.FileName = Test.Source;
                 P.StartInfo.CreateNoWindow = true;

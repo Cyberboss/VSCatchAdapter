@@ -57,10 +57,16 @@ namespace VSCatchAdapter
             FTestFilesAddRemoveListener.StartListeningForTestFileChanges();
 
             FSolutionListener.SolutionUnloaded += SolutionListenerOnSolutionUnloaded;
+            FSolutionListener.SolutionUnloaded += SolutionListenerOnSolutionLoaded;
             FSolutionListener.SolutionProjectChanged += OnSolutionProjectChanged;
             FSolutionListener.StartListeningForChanges();
 
             FTestFilesUpdateWatcher.FileChangedEvent += OnTestFileItemChanged;
+            try
+            {
+                SolutionListenerOnSolutionLoaded(null, null);
+            }
+            catch { }
         }
 
         private void OnTestContainersChanged()
@@ -74,40 +80,86 @@ namespace VSCatchAdapter
         private void SolutionListenerOnSolutionUnloaded(object ASender, EventArgs AEventArgs)
         {
             FInitialContainerSearch = true;
+            FCachedContainers.Clear();
+        }
+
+        private void SolutionListenerOnSolutionLoaded(object ASender, EventArgs AEventArgs)
+        {
+            EnumerateProjectExes();
+            FDTE.Events.BuildEvents.OnBuildDone += OnBuild;
+        }
+
+        void OnBuild(vsBuildScope Scope, vsBuildAction Action)
+        {
+            EnumerateProjectExes();
         }
 
         private void OnSolutionProjectChanged(object ASender, SolutionEventsListenerEventArgs AEventArgs)
         {
-            for(int I = 0; I < FDTE.Solution.Projects.Count; ++I)
-            {
-                VCProject ProjCfg = FDTE.Solution.Projects.Item(I).Object;
-                if(ProjCfg != null)
-                {
-                    IVCCollection Configs = ProjCfg.Configurations;
-                    if (Configs != null)
-                    {
-                        foreach (VCConfiguration Config in Configs)
-                        {
-                            var Files = FindExeFiles(Config.OutputDirectory);
-                            if (AEventArgs.ChangedReason == SolutionChangedReason.Load)
-                                UpdateFileWatcher(Files, true);
-                            else if (AEventArgs.ChangedReason == SolutionChangedReason.Unload)
-                                UpdateFileWatcher(Files, false);
-                        }
-                    }
-                }
-            }
+            FInitialContainerSearch = true;
+            FCachedContainers.Clear();
+            EnumerateProjectExes();
         }
 
-
+        void EnumerateProjectExes()
+        {
+            try
+            {
+                for (int I = 0; I <= FDTE.Solution.Projects.Count; ++I)
+                {
+                    try
+                    {
+                        var ProjOrg = FDTE.Solution.Projects.Item(I).Object;
+                        VCProject Proj = FDTE.Solution.Projects.Item(I).Object as VCProject;
+                        if (Proj != null)
+                        {
+                            try
+                            {
+                                IVCCollection Configs = Proj.Configurations as IVCCollection;
+                                if (Configs != null)
+                                {
+                                    foreach (var UCConfig in Configs)
+                                        try
+                                        {
+                                            var Config = UCConfig as VCConfiguration;
+                                            List<string> Files = new List<string>();
+                                            Files.Add(EvaluatePrimaryOutput(Config));
+                                            UpdateFileWatcher(Files, true);
+                                        }
+                                        catch { }
+                                }
+                            }
+                            catch { }
+                        }
+                    }
+                    catch { }
+                }
+            }
+            catch { }
+        }
+        private string EvaluateOutputDir(VCConfiguration AConfig)
+        {
+            var SolutionDir = Path.GetDirectoryName(FDTE.Solution.FileName);
+            var ProjectDir = (AConfig.project as VCProject).ProjectDirectory.Replace("$(SolutionDir)", SolutionDir + Path.DirectorySeparatorChar);
+            return AConfig.OutputDirectory.Replace("$(SolutionDir)", SolutionDir + Path.DirectorySeparatorChar).Replace("$(ProjectDir)", ProjectDir + Path.DirectorySeparatorChar);
+        }
+        private string EvaluatePrimaryOutput(VCConfiguration AConfig)
+        {
+            var SolutionDir = Path.GetDirectoryName(FDTE.Solution.FileName);
+            var ProjectDir = (AConfig.project as VCProject).ProjectDirectory.Replace("$(SolutionDir)", SolutionDir + Path.DirectorySeparatorChar);
+            return AConfig.PrimaryOutput.Replace("$(SolutionDir)", SolutionDir + Path.DirectorySeparatorChar).Replace("$(ProjectDir)", ProjectDir + Path.DirectorySeparatorChar);
+        }
         private void UpdateFileWatcher(IEnumerable<string> AFiles, bool AIsAdd)
         {
             foreach (var F in AFiles)
             {
                 if (AIsAdd)
                 {
-                    FTestFilesUpdateWatcher.AddWatch(F);
-                    AddTestContainerIfTestFile(F);
+                    foreach (var Existing in FCachedContainers)
+                        if (Existing.Source == F)
+                            continue;
+                    if (AddTestContainerIfTestFile(F))
+                        FTestFilesUpdateWatcher.AddWatch(F);
                 }
                 else
                 {
@@ -128,13 +180,17 @@ namespace VSCatchAdapter
             }
         }
 
-        private void AddTestContainerIfTestFile(string AFile)
+        private bool AddTestContainerIfTestFile(string AFile)
         {
             RemoveTestContainer(AFile); // Remove if there is an existing container
 
             // If this is a test file
             if (IsTestFile(AFile))
+            {
                 FCachedContainers.Add(new CatchTestContainer(this, AFile, ExecutorUri));
+                return true;
+            }
+            return false;
         }
 
         private void RemoveTestContainer(string AFile)
@@ -188,7 +244,7 @@ namespace VSCatchAdapter
             }
         }
 
-        private IEnumerable<string> FindExeFiles(string APath)
+        private List<string> FindExeFiles(string APath)
         {
             var Files = new List<string>();
 

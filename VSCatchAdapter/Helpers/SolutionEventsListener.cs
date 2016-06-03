@@ -20,6 +20,7 @@ namespace VSCatchAdapter.EventWatchers
         /// </summary>
         public event EventHandler<SolutionEventsListenerEventArgs> SolutionProjectChanged;
 
+        public event EventHandler SolutionLoaded;
         public event EventHandler SolutionUnloaded;
 
         [ImportingConstructor]
@@ -59,9 +60,17 @@ namespace VSCatchAdapter.EventWatchers
 
         public void OnSolutionUnloaded()
         {
-            if(SolutionUnloaded != null)
+            if (SolutionUnloaded != null)
             {
                 SolutionUnloaded(this, new System.EventArgs());
+            }
+        }
+
+        public void OnSolutionLoaded()
+        {
+            if (SolutionLoaded != null)
+            {
+                SolutionLoaded(this, new System.EventArgs());
             }
         }
 
@@ -87,12 +96,12 @@ namespace VSCatchAdapter.EventWatchers
             return VSConstants.S_OK;
         }
 
-	    public int OnAfterCloseSolution(object pUnkReserved)
+        public int OnAfterCloseSolution(object pUnkReserved)
 	    {
 	        OnSolutionUnloaded();
             return VSConstants.S_OK;
         }
-
+        
         // Unused events...
 
         /// <summary>
@@ -108,6 +117,7 @@ namespace VSCatchAdapter.EventWatchers
 
         public int OnAfterOpenSolution(object pUnkReserved, int fNewSolution)
         {
+            OnSolutionLoaded();
             return VSConstants.S_OK;
         }
 

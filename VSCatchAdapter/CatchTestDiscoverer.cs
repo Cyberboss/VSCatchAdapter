@@ -46,7 +46,6 @@ namespace VSCatchAdapter
         }
         public static List<TestCase> GetTests(IEnumerable<string> ASources, ITestCaseDiscoverySink ADiscoverySink)
         {
-            Debugger.Break();
             List<TestCase> TestCases = new List<TestCase>();
             foreach (var Source in ASources) {
                 try

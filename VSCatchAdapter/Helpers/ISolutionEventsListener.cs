@@ -13,5 +13,6 @@ namespace VSCatchAdapter.EventWatchers
         void StartListeningForChanges();
         void StopListeningForChanges();
         event EventHandler SolutionUnloaded;
+        event EventHandler SolutionLoaded;
     }
 }
