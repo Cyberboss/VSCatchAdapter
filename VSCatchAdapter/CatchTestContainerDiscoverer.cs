@@ -7,8 +7,6 @@ using Microsoft.VisualStudio.TestWindow.Extensibility;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using VSCatchAdapter.EventWatchers;
-using VSCatchAdapter.EventWatchers.EventArgs;
 using Microsoft.VisualStudio.VCProjectEngine;
 using EnvDTE;
 
@@ -23,7 +21,6 @@ namespace VSCatchAdapter
         EnvDTE.DTE FDTE;
         private IServiceProvider FServiceProvider;
         private ILogger FLogger;
-        private ISolutionEventsListener FSolutionListener;
         private readonly List<ITestContainer> FCachedContainers;
         static protected string FileExtension { get { return ".exe"; } }
         public Uri ExecutorUri { get { return CatchTestExecuter.ExecutorUri; } }
@@ -32,47 +29,18 @@ namespace VSCatchAdapter
         [ImportingConstructor]
         public CatchTestContainerDiscoverer(
             [Import(typeof(SVsServiceProvider))] IServiceProvider AServiceProvider,
-            ILogger ALogger,
-            ISolutionEventsListener ASolutionListener,
-            ITestFilesUpdateWatcher ATestFilesUpdateWatcher,
-            ITestFileAddRemoveListener ATestFilesAddRemoveListener)
+            ILogger ALogger)
         {
             Trace.WriteLine("Initializing Catch Test Discoverer");
             
             FCachedContainers = new List<ITestContainer>();
             FServiceProvider = AServiceProvider;
             FLogger = ALogger;
-            FSolutionListener = ASolutionListener;
-
             FDTE = (EnvDTE.DTE)FServiceProvider.GetService(typeof(EnvDTE.DTE));
-            
-            
-            FSolutionListener.SolutionUnloaded += SolutionListenerOnSolutionLoaded;
-            FSolutionListener.SolutionProjectChanged += OnSolutionProjectChanged;
-            FSolutionListener.StartListeningForChanges();
-            
-            try
-            {
-                SolutionListenerOnSolutionLoaded(null, null);
-            }
-            catch { }
-        }
-
-        private void SolutionListenerOnSolutionLoaded(object ASender, EventArgs AEventArgs)
-        {
-            EnumerateProjectExes();
             FDTE.Events.BuildEvents.OnBuildDone += OnBuild;
-        }
-
-        void OnBuild(vsBuildScope Scope, vsBuildAction Action)
-        {
             EnumerateProjectExes();
         }
-
-        private void OnSolutionProjectChanged(object ASender, SolutionEventsListenerEventArgs AEventArgs)
-        {
-            EnumerateProjectExes();
-        }
+        
 
         void EnumerateProjectExes()
         {
@@ -141,6 +109,11 @@ namespace VSCatchAdapter
             }
         }
 
+        void OnBuild(vsBuildScope Scope, vsBuildAction Action)
+        {
+            EnumerateProjectExes();
+        }
+
         private IEnumerable<ITestContainer> GetTestContainers()
         {
             return FCachedContainers;
@@ -177,17 +150,7 @@ namespace VSCatchAdapter
         }
 
         protected virtual void Dispose(bool ADisposing)
-        {
-            if (ADisposing)
-            {
-                if (FSolutionListener != null)
-                {
-                    FSolutionListener.SolutionProjectChanged -= OnSolutionProjectChanged;
-                    FSolutionListener.StopListeningForChanges();
-                    FSolutionListener = null;
-                }
-            }
-        }
+        {}
 
     }
 }

@@ -46,15 +46,6 @@
     <Compile Include="CatchTestDiscoverer.cs" />
     <Compile Include="CatchTestExecuter.cs" />
     <Compile Include="CatchTestOutputReader.cs" />
-    <Compile Include="Helpers\ISolutionEventsListener.cs" />
-    <Compile Include="Helpers\ITestFileAddRemoveListener.cs" />
-    <Compile Include="Helpers\ITestFilesUpdateWatcher.cs" />
-    <Compile Include="Helpers\SolutionEventsListener.cs" />
-    <Compile Include="Helpers\SolutionEventsListenerEventArgs.cs" />
-    <Compile Include="Helpers\TestFileAddRemoveListener.cs" />
-    <Compile Include="Helpers\TestFileChangedEventArgs.cs" />
-    <Compile Include="Helpers\TestFilesUpdateWatcher.cs" />
-    <Compile Include="Helpers\VsSolutionHelper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

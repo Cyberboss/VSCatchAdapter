@@ -76,7 +76,9 @@ namespace VSCatchAdapter
                                     var TestCase = new TestCase(Line, CatchTestExecuter.ExecutorUri, Source);
                                     TestCases.Add(TestCase);
                                     if (ADiscoverySink != null)
+                                    {
                                         ADiscoverySink.SendTestCase(TestCase);
+                                    }
                                 }
                             }
                             finally
