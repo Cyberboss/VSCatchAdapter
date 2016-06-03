@@ -26,9 +26,7 @@ namespace VSCatchAdapter
         private ISolutionEventsListener FSolutionListener;
         private ITestFilesUpdateWatcher FTestFilesUpdateWatcher;
         private ITestFileAddRemoveListener FTestFilesAddRemoveListener;
-        private bool FInitialContainerSearch;
         private readonly List<ITestContainer> FCachedContainers;
-        private List<string> FKnownOtherExes;
         static protected string FileExtension { get { return ".exe"; } }
         public Uri ExecutorUri { get { return CatchTestExecuter.ExecutorUri; } }
         public IEnumerable<ITestContainer> TestContainers { get { return GetTestContainers(); } }
@@ -42,10 +40,8 @@ namespace VSCatchAdapter
             ITestFileAddRemoveListener ATestFilesAddRemoveListener)
         {
             Trace.WriteLine("Initializing Catch Test Discoverer");
-
-            FInitialContainerSearch = true;
+            
             FCachedContainers = new List<ITestContainer>();
-            FKnownOtherExes = new List<string>();
             FServiceProvider = AServiceProvider;
             FLogger = ALogger;
             FSolutionListener = ASolutionListener;
@@ -55,8 +51,7 @@ namespace VSCatchAdapter
             FDTE = (EnvDTE.DTE)FServiceProvider.GetService(typeof(EnvDTE.DTE));
             
             FTestFilesAddRemoveListener.StartListeningForTestFileChanges();
-
-            FSolutionListener.SolutionUnloaded += SolutionListenerOnSolutionUnloaded;
+            
             FSolutionListener.SolutionUnloaded += SolutionListenerOnSolutionLoaded;
             FSolutionListener.SolutionProjectChanged += OnSolutionProjectChanged;
             FSolutionListener.StartListeningForChanges();
@@ -69,22 +64,9 @@ namespace VSCatchAdapter
             catch { }
         }
 
-        private void OnTestContainersChanged()
-        {
-            if (TestContainersUpdated != null && !FInitialContainerSearch)
-            {
-                TestContainersUpdated(this, EventArgs.Empty);
-            }
-        }
-
-        private void SolutionListenerOnSolutionUnloaded(object ASender, EventArgs AEventArgs)
-        {
-            FInitialContainerSearch = true;
-            FCachedContainers.Clear();
-        }
-
         private void SolutionListenerOnSolutionLoaded(object ASender, EventArgs AEventArgs)
         {
+            FCachedContainers.Clear();
             EnumerateProjectExes();
             FDTE.Events.BuildEvents.OnBuildDone += OnBuild;
         }
@@ -96,8 +78,6 @@ namespace VSCatchAdapter
 
         private void OnSolutionProjectChanged(object ASender, SolutionEventsListenerEventArgs AEventArgs)
         {
-            FInitialContainerSearch = true;
-            FCachedContainers.Clear();
             EnumerateProjectExes();
         }
 
@@ -122,9 +102,13 @@ namespace VSCatchAdapter
                                         try
                                         {
                                             var Config = UCConfig as VCConfiguration;
-                                            List<string> Files = new List<string>();
-                                            Files.Add(EvaluatePrimaryOutput(Config));
-                                            UpdateFileWatcher(Files, true);
+                                            var File = EvaluatePrimaryOutput(Config);
+                                            if (IsTestFile(File))
+                                            {
+                                                List<string> Files = new List<string>();
+                                                Files.Add(File);
+                                                UpdateFileWatcher(Files, true);
+                                            }
                                         }
                                         catch { }
                                 }
@@ -155,9 +139,6 @@ namespace VSCatchAdapter
             {
                 if (AIsAdd)
                 {
-                    foreach (var Existing in FCachedContainers)
-                        if (Existing.Source == F)
-                            continue;
                     if (AddTestContainerIfTestFile(F))
                         FTestFilesUpdateWatcher.AddWatch(F);
                 }
@@ -204,56 +185,7 @@ namespace VSCatchAdapter
 
         private IEnumerable<ITestContainer> GetTestContainers()
         {
-            if (FInitialContainerSearch)
-            {
-                FCachedContainers.Clear();
-                FKnownOtherExes.Clear();
-            }
-
-            UpdateFileWatcher(CheckForNewExes(), true);
-
             return FCachedContainers;
-        }
-
-        private IEnumerable<string> CheckForNewExes()
-        {
-            var Solution = (IVsSolution)FServiceProvider.GetService(typeof(SVsSolution));
-            string Unused1, Unused2, SolutionDirectory;
-            Solution.GetSolutionInfo(out SolutionDirectory, out Unused1, out Unused2);
-            List<string> NewExes = new List<string>();
-            try
-            {
-                DirSearch(SolutionDirectory, NewExes);   
-            }
-            catch { }
-            return NewExes;
-        }
-        void DirSearch(string ADir, List<string> AAddToHere)
-        {
-            foreach (var D in Directory.GetDirectories(ADir))
-            {
-                DirSearch(D, AAddToHere);
-            }
-            foreach (var F in Directory.GetFiles(ADir))
-            {
-                if (Path.GetExtension(F) == FileExtension && !FKnownOtherExes.Contains(F))
-                {
-                    FKnownOtherExes.Add(F);
-                    AAddToHere.Add(F);
-                }
-            }
-        }
-
-        private List<string> FindExeFiles(string APath)
-        {
-            var Files = new List<string>();
-
-            var SysFiles = Directory.GetFiles(APath);
-
-            foreach (var File in SysFiles)
-                if (IsTestFile(File))
-                    Files.Add(File);
-            return Files;
         }
 
         private static bool IsExeFile(string APath)
@@ -265,18 +197,14 @@ namespace VSCatchAdapter
         {
             try
             {
-                if (IsExeFile(APath) && CatchTestDiscoverer.IsCatchTest(APath))
+                if (File.Exists(APath) && IsExeFile(APath) && CatchTestDiscoverer.IsCatchTest(APath))
                 {
-                    FKnownOtherExes.Add(APath);
                     return true;
                 }
                 else
                     return false;
             }
-            catch (IOException AException)
-            {
-                FLogger.Log(MessageLevel.Error, "IO error when detecting a catch test file during Test Container Discovery" + AException.Message);
-            }
+            catch { }
 
             return false;
         }
@@ -316,7 +244,6 @@ namespace VSCatchAdapter
                 }
             }
         }
-
 
     }
 }

@@ -47,43 +47,47 @@ namespace VSCatchAdapter
         public static List<TestCase> GetTests(IEnumerable<string> ASources, ITestCaseDiscoverySink ADiscoverySink)
         {
             List<TestCase> TestCases = new List<TestCase>();
-            foreach (var Source in ASources) {
-                try
+            foreach (var Source in ASources)
+            {
+                if (File.Exists(Source))
                 {
-                    Trace.WriteLine("Checking " + Source + " for Catch tests");
-                    if (IsCatchTest(Source))
+                    try
                     {
-                        try
+                        Trace.WriteLine("Checking " + Source + " for Catch tests");
+                        if (IsCatchTest(Source))
                         {
-                            FLines = new List<string>();
+                            try
                             {
-                                Process P = new Process();
-                                P.StartInfo.Arguments = "--list-test-names-only";
-                                P.StartInfo.FileName = Source;
-                                P.StartInfo.RedirectStandardOutput = true;
-                                P.StartInfo.UseShellExecute = false;
-                                P.StartInfo.CreateNoWindow = true;
-                                P.OutputDataReceived += RecieveData;
-                                P.Start();
-                                P.BeginOutputReadLine();
-                                P.WaitForExit();
+                                FLines = new List<string>();
+                                {
+                                    Process P = new Process();
+                                    P.StartInfo.Arguments = "--list-test-names-only";
+                                    P.StartInfo.FileName = Source;
+                                    P.StartInfo.RedirectStandardOutput = true;
+                                    P.StartInfo.UseShellExecute = false;
+                                    P.StartInfo.CreateNoWindow = true;
+                                    P.OutputDataReceived += RecieveData;
+                                    P.Start();
+                                    P.BeginOutputReadLine();
+                                    P.WaitForExit();
+                                }
+                                foreach (var Line in FLines)
+                                {
+                                    var TestCase = new TestCase(Line, CatchTestExecuter.ExecutorUri, Source);
+                                    TestCases.Add(TestCase);
+                                    if (ADiscoverySink != null)
+                                        ADiscoverySink.SendTestCase(TestCase);
+                                }
                             }
-                            foreach (var Line in FLines)
+                            finally
                             {
-                                var TestCase = new TestCase(Line, CatchTestExecuter.ExecutorUri, Source);
-                                TestCases.Add(TestCase);
-                                if (ADiscoverySink != null)
-                                    ADiscoverySink.SendTestCase(TestCase);
+                                FLines = null;
                             }
-                        }
-                        finally
-                        {
-                            FLines = null;
-                        }
 
+                        }
                     }
+                    catch { }
                 }
-                catch { }
             }
             return TestCases;
         }
