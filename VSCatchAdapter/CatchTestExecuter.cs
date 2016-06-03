@@ -13,10 +13,6 @@ namespace VSCatchAdapter
         public const string ExecutorUriString = "executor://CatchTestExecutor/v1";
         public static readonly Uri ExecutorUri = new Uri(CatchTestExecuter.ExecutorUriString);
         bool FCancelled;
-        public CatchTestExecuter()
-        {
-            Debugger.Launch();
-        }
         public void RunTests(IEnumerable<string> ASources, IRunContext ARunContext,
             IFrameworkHandle AFrameworkHandle)
         {
