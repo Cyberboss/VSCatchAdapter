@@ -10,6 +10,8 @@ namespace VSCatchAdapter
     [ExtensionUri(CatchTestExecuter.ExecutorUriString)]
     class CatchTestExecuter : CatchTestOutputReader, ITestExecutor
     {
+        public const string ExecutorUriString = "executor://CatchTestExecutor/v1";
+        public static readonly Uri ExecutorUri = new Uri(CatchTestExecuter.ExecutorUriString);
         bool FCancelled;
         public void RunTests(IEnumerable<string> ASources, IRunContext ARunContext,
             IFrameworkHandle AFrameworkHandle)
@@ -33,6 +35,7 @@ namespace VSCatchAdapter
                 P.StartInfo.Arguments = Test.FullyQualifiedName;
                 P.StartInfo.RedirectStandardError = true;
                 P.StartInfo.FileName = Test.Source;
+                P.StartInfo.CreateNoWindow = true;
                 P.StartInfo.UseShellExecute = false;
 
                 P.OutputDataReceived += RecieveData;
@@ -48,7 +51,6 @@ namespace VSCatchAdapter
                         {
                             P.Start();
                             P.BeginErrorReadLine();
-                            P.BeginOutputReadLine();
 
                             while (!P.HasExited)
                             {
@@ -95,7 +97,5 @@ namespace VSCatchAdapter
         {
             FCancelled = true;
         }
-        public const string ExecutorUriString = "executor://CatchTestExecutor/v1";
-        public static readonly Uri ExecutorUri = new Uri(CatchTestExecuter.ExecutorUriString);
     }
 }

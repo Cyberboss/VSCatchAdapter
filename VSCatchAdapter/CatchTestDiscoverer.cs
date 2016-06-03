@@ -16,16 +16,43 @@ namespace VSCatchAdapter
         {
             GetTests(ASources, ADiscoverySink);
         }
+        static bool ContainsSequence(byte[] toSearch, byte[] toFind)
+        {
+            for (var i = 0; i + toFind.Length < toSearch.Length; i++)
+            {
+                var allSame = true;
+                for (var j = 0; j < toFind.Length; j++)
+                {
+                    if (toSearch[i + j] != toFind[j])
+                    {
+                        allSame = false;
+                        break;
+                    }
+                }
 
-        public static List<TestCase> GetTests(IEnumerable<string> ASources, ITestCaseDiscoverySink ADiscoverySink)
+                if (allSame)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+        static public bool IsCatchTest(string APath)
         {
             const string Comparison1 = "is a Catch", Comparison2 = "host application";
+            var Text = File.ReadAllBytes(APath);
+            return ContainsSequence(Text, Encoding.ASCII.GetBytes(Comparison1)) && ContainsSequence(Text, Encoding.ASCII.GetBytes(Comparison2));
+        }
+        public static List<TestCase> GetTests(IEnumerable<string> ASources, ITestCaseDiscoverySink ADiscoverySink)
+        {
+            Debugger.Break();
             List<TestCase> TestCases = new List<TestCase>();
             foreach (var Source in ASources) {
                 try
                 {
-                    var Text = File.ReadAllText(Source, Encoding.ASCII);
-                    if (Text.Contains(Comparison1) && Text.Contains(Comparison2))
+                    Trace.WriteLine("Checking " + Source + " for Catch tests");
+                    if (IsCatchTest(Source))
                     {
                         try
                         {
@@ -36,17 +63,20 @@ namespace VSCatchAdapter
                                 P.StartInfo.FileName = Source;
                                 P.StartInfo.RedirectStandardOutput = true;
                                 P.StartInfo.UseShellExecute = false;
+                                P.StartInfo.CreateNoWindow = true;
                                 P.OutputDataReceived += RecieveData;
                                 P.Start();
                                 P.BeginOutputReadLine();
                                 P.WaitForExit();
                             }
                             foreach (var Line in FLines)
-                                TestCases.Add(new TestCase(Line, CatchTestExecuter.ExecutorUri, Source));
-                            if (ADiscoverySink != null)
-                                foreach (var TestCase in TestCases)
+                            {
+                                var TestCase = new TestCase(Line, CatchTestExecuter.ExecutorUri, Source);
+                                TestCases.Add(TestCase);
+                                if (ADiscoverySink != null)
                                     ADiscoverySink.SendTestCase(TestCase);
                             }
+                        }
                         finally
                         {
                             FLines = null;
