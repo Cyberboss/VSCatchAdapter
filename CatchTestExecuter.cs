@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using Microsoft.VisualStudio.TestPlatform.ObjectModel;
 using Microsoft.VisualStudio.TestPlatform.ObjectModel.Adapter;
 using System.Diagnostics;
-using System.Threading;
 
 namespace VSCatchAdapter
 {
@@ -33,46 +32,29 @@ namespace VSCatchAdapter
 
                 var P = new Process();
                 P.StartInfo.Arguments = '"' + Test.FullyQualifiedName + '"';
-                P.StartInfo.RedirectStandardError = true;
+                P.StartInfo.RedirectStandardOutput = true;
                 P.StartInfo.FileName = Test.Source;
                 P.StartInfo.CreateNoWindow = true;
                 P.StartInfo.UseShellExecute = false;
-
+                
                 P.OutputDataReceived += RecieveData;
 
                 var Result = new TestResult(Test);
                 Result.StartTime = DateTime.Now;
                 try
                 {
+                    FLines = new List<string>();
                     try
                     {
-                        FLines = new List<string>();
-                        try
-                        {
-                            P.Start();
-                            P.BeginErrorReadLine();
-
-                            while (!P.HasExited)
-                            {
-                                if (FCancelled)
-                                {
-                                    P.Kill();
-                                    return;
-                                }
-                                Thread.Yield();
-                            }
-                        }
-                        catch
-                        {
-                            Result.Outcome = TestOutcome.NotFound;
-                            continue;
-                        }
+                        P.Start();
+                        P.BeginOutputReadLine();
+                        P.WaitForExit();
                     }
-                    finally
+                    catch
                     {
-                        FLines = null;
+                        Result.Outcome = TestOutcome.NotFound;
+                        continue;
                     }
-
 
                     if (P.ExitCode != 0)
                     {
@@ -85,6 +67,7 @@ namespace VSCatchAdapter
                 }
                 finally
                 {
+                    FLines = null;
                     Result.EndTime = DateTime.Now;
                     Result.Duration = Result.EndTime - Result.StartTime;
                     AFrameworkHandle.RecordResult(Result);
