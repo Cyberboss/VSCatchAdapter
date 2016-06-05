@@ -38,6 +38,11 @@ namespace VSCatchAdapter
             FLogger = ALogger;
             FDTE = (EnvDTE.DTE)FServiceProvider.GetService(typeof(EnvDTE.DTE));
             FDTE.Events.BuildEvents.OnBuildDone += OnBuild;
+            FDTE.Events.SolutionEvents.Opened += EnumerateProjectExes;
+            FDTE.Events.SolutionEvents.ProjectAdded += ProjectAdded;
+        }
+        void ProjectAdded(Project AProject)
+        {
             EnumerateProjectExes();
         }
         
