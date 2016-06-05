@@ -61,7 +61,7 @@ namespace VSCatchAdapter
                                 FLines = new List<string>();
                                 {
                                     Process P = new Process();
-                                    P.StartInfo.Arguments = "--list-test-names-only";
+                                    P.StartInfo.Arguments = "--list-test-names-and-sources";
                                     P.StartInfo.FileName = Source;
                                     P.StartInfo.RedirectStandardOutput = true;
                                     P.StartInfo.UseShellExecute = false;
@@ -71,15 +71,41 @@ namespace VSCatchAdapter
                                     P.BeginOutputReadLine();
                                     P.WaitForExit();
                                 }
-                                foreach (var Line in FLines)
-                                {
-                                    var TestCase = new TestCase(Line, CatchTestExecuter.ExecutorUri, Source);
-                                    TestCases.Add(TestCase);
-                                    if (ADiscoverySink != null)
+                                try {
+                                    if (FLines.Count % 2 == 0)
                                     {
-                                        ADiscoverySink.SendTestCase(TestCase);
+                                        bool IsSourceLine = false;
+                                        TestCase TestCase = null;
+                                        foreach (var Line in FLines)
+                                        {
+                                            if (!IsSourceLine)
+                                                TestCase = new TestCase(Line, CatchTestExecuter.ExecutorUri, Source);
+                                            else
+                                            {
+                                                int FirstParen = 0, SecondParen = 0;
+                                                for (int I = Line.Length - 1; I > 0; --I)
+                                                    if (Line[I] == ')')
+                                                    {
+                                                        SecondParen = I;
+                                                        break;
+                                                    }
+                                                for (int I = SecondParen - 1; I > 0; --I)
+                                                    if (Line[I] == '(')
+                                                    {
+                                                        FirstParen = I;
+                                                        break;
+                                                    }
+                                                TestCase.CodeFilePath = Line.Substring(0, FirstParen);
+                                                var SubStr = Line.Substring(FirstParen + 1, SecondParen - FirstParen - 1);
+                                                TestCase.LineNumber = System.Int32.Parse(SubStr);
+                                                TestCases.Add(TestCase);
+                                                if (ADiscoverySink != null)
+                                                    ADiscoverySink.SendTestCase(TestCase);
+                                            }
+                                            IsSourceLine = !IsSourceLine;
+                                        }
                                     }
-                                }
+                                }catch { }
                             }
                             finally
                             {

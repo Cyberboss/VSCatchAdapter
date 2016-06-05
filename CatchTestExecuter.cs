@@ -15,8 +15,7 @@ namespace VSCatchAdapter
         public void RunTests(IEnumerable<string> ASources, IRunContext ARunContext,
             IFrameworkHandle AFrameworkHandle)
         {
-            IEnumerable<TestCase> Tests = CatchTestDiscoverer.GetTests(ASources, null);
-            RunTests(Tests, ARunContext, AFrameworkHandle);
+            RunTests(CatchTestDiscoverer.GetTests(ASources, null), ARunContext, AFrameworkHandle);
         }
 
         public void RunTests(IEnumerable<TestCase> ATests, IRunContext ARunContext,
@@ -31,7 +30,7 @@ namespace VSCatchAdapter
 
 
                 var P = new Process();
-                P.StartInfo.Arguments = '"' + Test.FullyQualifiedName + '"';
+                P.StartInfo.Arguments = '"' + Test.FullyQualifiedName + "\" -r compact";
                 P.StartInfo.RedirectStandardOutput = true;
                 P.StartInfo.FileName = Test.Source;
                 P.StartInfo.CreateNoWindow = true;
@@ -40,10 +39,10 @@ namespace VSCatchAdapter
                 P.OutputDataReceived += RecieveData;
 
                 var Result = new TestResult(Test);
-                Result.StartTime = DateTime.Now;
                 try
                 {
                     FLines = new List<string>();
+                    AFrameworkHandle.RecordStart(Test);
                     try
                     {
                         P.Start();
@@ -56,13 +55,14 @@ namespace VSCatchAdapter
                         continue;
                     }
 
+
                     if (P.ExitCode != 0)
                     {
                         Result.ErrorMessage = "";
                         foreach (var Line in FLines)
                             Result.ErrorMessage += Line + System.Environment.NewLine;
+                        Result.ErrorMessage = Result.ErrorMessage.Replace(Test.CodeFilePath, "Line ");
                     }
-
                     Result.Outcome = P.ExitCode == 0 ? TestOutcome.Passed : TestOutcome.Failed;
                 }
                 finally
@@ -70,6 +70,7 @@ namespace VSCatchAdapter
                     FLines = null;
                     Result.EndTime = DateTime.Now;
                     Result.Duration = Result.EndTime - Result.StartTime;
+                    AFrameworkHandle.RecordEnd(Test, Result.Outcome);
                     AFrameworkHandle.RecordResult(Result);
                 }
             }
