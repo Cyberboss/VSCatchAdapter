@@ -11,3 +11,5 @@
 /obj/Debug
 /.vs/VSCatchAdapter/v14
 /bin/Debug
+/bin/Release
+/obj/Release
