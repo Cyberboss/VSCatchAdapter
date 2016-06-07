@@ -12,6 +12,12 @@ namespace VSCatchAdapter
     [FileExtension(".exe")]
     class CatchTestDiscoverer : CatchTestOutputReader, ITestDiscoverer
     {
+        public CatchTestDiscoverer()
+        {
+#if DEBUG
+            Debugger.Launch();
+#endif
+        }
         public void DiscoverTests(IEnumerable<string> ASources, IDiscoveryContext ADiscoveryContext, IMessageLogger ALogger, ITestCaseDiscoverySink ADiscoverySink)
         {
             GetTests(ASources, ADiscoverySink);

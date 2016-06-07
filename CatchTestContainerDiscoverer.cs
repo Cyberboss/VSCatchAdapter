@@ -40,13 +40,14 @@ namespace VSCatchAdapter
             FDTE.Events.BuildEvents.OnBuildDone += OnBuild;
             FDTE.Events.SolutionEvents.Opened += EnumerateProjectExes;
             FDTE.Events.SolutionEvents.ProjectAdded += ProjectAdded;
+#if DEBUG
+            System.Diagnostics.Debugger.Launch();
+#endif
         }
         void ProjectAdded(Project AProject)
         {
             EnumerateProjectExes();
         }
-        
-
         void EnumerateProjectExes()
         {
             FCachedContainers.Clear();
@@ -82,6 +83,7 @@ namespace VSCatchAdapter
                 }
             }
             catch { }
+            TestContainersUpdated(this, new EventArgs());
         }
         private string EvaluateOutputDir(VCConfiguration AConfig)
         {
