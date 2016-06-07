@@ -28,7 +28,6 @@ namespace VSCatchAdapter
                IFrameworkHandle AFrameworkHandle)
         {
             FCancelled = false;
-
             foreach (TestCase Test in ATests)
             {
                 if (FCancelled)
@@ -80,7 +79,8 @@ namespace VSCatchAdapter
                     AFrameworkHandle.RecordResult(Result);
                 }
             }
-
+            if (ARunContext.KeepAlive)
+                AFrameworkHandle.EnableShutdownAfterTestRun = true;
         }
 
         public void Cancel()
