@@ -10,9 +10,12 @@ namespace VSCatchAdapter
         {
             try
             {
-                var Result = AData.Data.Trim();
-                if (Result.Length != 0)
-                    FLines.Add(Result);
+                if (AData != null && AData.Data != null)
+                {
+                    var Result = AData.Data.Trim();
+                    if (Result.Length != 0)
+                        FLines.Add(Result);
+                }
             }
             catch { }
         }
