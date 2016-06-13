@@ -12,12 +12,6 @@ namespace VSCatchAdapter
     [FileExtension(".exe")]
     class CatchTestDiscoverer : CatchTestOutputReader, ITestDiscoverer
     {
-        public CatchTestDiscoverer()
-        {
-#if DEBUG
-            Debugger.Launch();
-#endif
-        }
         public void DiscoverTests(IEnumerable<string> ASources, IDiscoveryContext ADiscoveryContext, IMessageLogger ALogger, ITestCaseDiscoverySink ADiscoverySink)
         {
             GetTests(ASources, ADiscoverySink);
@@ -67,7 +61,7 @@ namespace VSCatchAdapter
                                 FLines = new List<string>();
                                 {
                                     Process P = new Process();
-                                    P.StartInfo.Arguments = "--list-test-names-and-sources";
+                                    P.StartInfo.Arguments = "--list-tests-and-sources";
                                     P.StartInfo.FileName = Source;
                                     P.StartInfo.RedirectStandardOutput = true;
                                     P.StartInfo.UseShellExecute = false;
@@ -80,13 +74,42 @@ namespace VSCatchAdapter
                                 try {
                                     if (FLines.Count % 2 == 0)
                                     {
-                                        bool IsSourceLine = false;
+                                        int LineType = 0;
                                         TestCase TestCase = null;
-                                        foreach (var Line in FLines)
+                                        foreach (var LineF in FLines)
                                         {
-                                            if (!IsSourceLine)
+                                            var Line = LineF.Trim();
+                                            if (LineType == 0)
                                                 TestCase = new TestCase(Line, CatchTestExecuter.ExecutorUri, Source);
-                                            else
+                                            else if(LineType == 1)
+                                            {
+                                                int FirstParen = 0, SecondParen = 0;
+                                                for (;;)
+                                                {
+                                                    int I;
+                                                    for (I = FirstParen; I < Line.Length; ++I)
+                                                        if (Line[I] == '[')
+                                                        {
+                                                            FirstParen = I;
+                                                            break;
+                                                        }
+                                                    if (I >= Line.Length || Line[I] != '[')
+                                                        break;
+                                                    for (I = FirstParen + 1; I < Line.Length; ++I)
+                                                        if (Line[I] == ']')
+                                                        {
+                                                            SecondParen = I;
+                                                            break;
+                                                        }
+                                                    if (Line[I] != ']')
+                                                        break;
+
+                                                    var SubStr = Line.Substring(FirstParen + 1, SecondParen - FirstParen - 1);
+                                                    TestCase.Traits.Add(new Trait(SubStr, "Category"));
+                                                    FirstParen = SecondParen + 1;
+                                                }
+                                            }
+                                            else if (LineType == 2)
                                             {
                                                 int FirstParen = 0, SecondParen = 0;
                                                 for (int I = Line.Length - 1; I > 0; --I)
@@ -108,7 +131,9 @@ namespace VSCatchAdapter
                                                 if (ADiscoverySink != null)
                                                     ADiscoverySink.SendTestCase(TestCase);
                                             }
-                                            IsSourceLine = !IsSourceLine;
+                                            ++LineType;
+                                            if (LineType > 2)
+                                                LineType = 0;
                                         }
                                     }
                                 }catch { }
