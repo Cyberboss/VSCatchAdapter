@@ -72,7 +72,7 @@ namespace VSCatchAdapter
                                     P.WaitForExit();
                                 }
                                 try {
-                                    if (FLines.Count % 2 == 0)
+                                    if (FLines.Count % 3 == 0)
                                     {
                                         int LineType = 0;
                                         TestCase TestCase = null;
