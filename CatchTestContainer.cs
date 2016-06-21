@@ -40,9 +40,6 @@ namespace VSCatchAdapter
             TargetFramework = FrameworkVersion.None;
             TargetPlatform = Architecture.AnyCPU;
             FTimeStamp = GetTimeStamp();
-#if DEBUG
-            System.Diagnostics.Debugger.Launch();
-#endif
         }
 
         private CatchTestContainer(CatchTestContainer ACopy)
