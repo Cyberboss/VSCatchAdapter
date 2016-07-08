@@ -70,7 +70,6 @@ namespace VSCatchAdapter
         public void RunTests(IEnumerable<TestCase> ATests, IRunContext ARunContext,
                IFrameworkHandle AFrameworkHandle)
         {
-            Debugger.Launch();
             Debugger.Break();
             FCancelled = false;
             if (ARunContext.InIsolation)
