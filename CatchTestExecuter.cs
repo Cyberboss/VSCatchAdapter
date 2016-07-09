@@ -40,26 +40,34 @@ namespace VSCatchAdapter
                 {
                     P.Start();
                     P.BeginOutputReadLine();
-                    P.WaitForExit();
+                    while (!FCancelled && !P.WaitForExit(1)) ;
                 }
                 catch
                 {
                     Result.Outcome = TestOutcome.NotFound;
                     return;
                 }
-
-
-                if (P.ExitCode != 0)
+                if (FCancelled)
+                    Result.Outcome = TestOutcome.Skipped;
+                else
                 {
-                    Result.ErrorMessage = "";
-                    foreach (var Line in FLines)
-                        Result.ErrorMessage += Line + System.Environment.NewLine;
-                    Result.ErrorMessage = Result.ErrorMessage.Replace(ATest.CodeFilePath, "Line ");
+                    if (P.ExitCode != 0)
+                    {
+                        Result.ErrorMessage = "";
+                        foreach (var Line in FLines)
+                            Result.ErrorMessage += Line + System.Environment.NewLine;
+                        Result.ErrorMessage = Result.ErrorMessage.Replace(ATest.CodeFilePath, "Line ");
+                    }
+                    Result.Outcome = P.ExitCode == 0 ? TestOutcome.Passed : TestOutcome.Failed;
                 }
-                Result.Outcome = P.ExitCode == 0 ? TestOutcome.Passed : TestOutcome.Failed;
             }
             finally
             {
+                try
+                {
+                    P.Kill();
+                }
+                catch { }
                 FLines = null;
                 Result.EndTime = DateTime.Now;
                 Result.Duration = Result.EndTime - Result.StartTime;
